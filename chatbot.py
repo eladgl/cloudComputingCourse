@@ -1,26 +1,12 @@
-from flask import Flask, render_template, request, jsonify
-import json
-from firebase_config import db
-from json_analyzing import indexing
 import nltk
 from nltk.chat.util import Chat, reflections
+from main import fetch_data_from_firestore, app
+from flask import render_template, request, jsonify
 
-# Initialize NLTK resources
 nltk.download('punkt')
 nltk.download('wordnet')
 
-app = Flask(__name__)
-
-def fetch_data_from_firestore():
-    docs = db.collection('analytics').stream()
-    data = {}
-    for doc in docs:
-        doc_data = doc.to_dict().get('data', {})
-        data.update(doc_data)
-    return data
-
-# Fetch data from Firestore when initializing the app
-raw_data = fetch_data_from_firestore()
+data = fetch_data_from_firestore()
 
 patterns = [
     (r'hi|hello|hey', ['Hello!', 'Hi there!', 'Hey!']),
@@ -48,59 +34,18 @@ patterns = [
     (r'what is the meaning of life?', ["The meaning of life is a philosophical question that has been debated for centuries.", "Many people believe that the meaning of life is to find happiness and purpose."]),
     (r'what is your favorite book?', ["I don't read books, but I can help you find information about many books.", "I don't have a favorite book, but I can recommend some if you'd like."]),
     (r'do you play games?', ["I don't play games, but I know a lot about them!", "I can provide information about many games, but I don't play them myself."]),
+    (r'(.*)', [lambda match: f'The number of {match.group(1)} is {data.get(match.group(1), "unknown")}']),
 ]
-print(raw_data)
-if(raw_data ):
-    for key in raw_data.keys():
-        print(key)
-        pattern = (rf'(?i)(.*{key}.*)', [f'The number of {key} is {raw_data[key]}'])
-        patterns.append(pattern)
 
 chatbot_instance = Chat(patterns, reflections)
+
+
+@app.route('/chatbot')
+def chatbot():
+    return render_template('chatbot.html')
 
 @app.route('/chat', methods=['POST'])
 def chat():
     user_message = request.json.get('message')
     response = chatbot_instance.respond(user_message)
     return jsonify({'response': response})
-
-@app.route('/chatbot')
-def chatbot():
-    return render_template('chatbot.html')
-
-@app.route('/upload', methods=['POST'])
-def upload():
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-    if file:
-        file_content = file.read().decode('utf-8')
-        try:
-            json_content = json.loads(file_content)
-            json_as_index = indexing(json_content)
-            
-            # Store JSON content in Firestore
-            db.collection('analytics').add({'data': json_as_index})
-            
-            # Process the JSON content here
-            return render_template('index.html', json_content=json_as_index)
-        except json.JSONDecodeError:
-            return jsonify({'error': 'Invalid JSON file'}), 400
-    else:
-        return jsonify({'error': 'Invalid file type, only JSON files are allowed'}), 400
-
-@app.route('/getData', methods=['GET'])
-def get_data():
-    try:
-        data = fetch_data_from_firestore()
-        return jsonify(data), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/')
-def index():
-    data = fetch_data_from_firestore()
-    return render_template('index.html', json_content=data)
-
-if __name__ == '__main__':
-    app.run(debug=True)
