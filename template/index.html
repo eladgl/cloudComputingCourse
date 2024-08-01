@@ -1,25 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hello, World!</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple Website</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-        }
-        h1 {
-            color: #333;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      .navbar {
+        background-color: #333;
+        overflow: hidden;
+      }
+      .navbar p {
+        float: left;
+        display: block;
+        color: #f2f2f2;
+        text-align: center;
+        padding: 14px 16px;
+        text-decoration: none;
+      }
+      .navbar p:hover {
+        background-color: #ddd;
+        color: black;
+      }
+      .content {
+        padding: 20px;
+      }
+      .hidden {
+        display: none;
+      }
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .table,
+      .table th,
+      .table td {
+        border: 1px solid black;
+      }
+      .table th,
+      .table td {
+        padding: 8px;
+        text-align: left;
+      }
+      .chart-container {
+        position: relative;
+        height: 300px;
+        width: 300px;
+      }
+      .charts-row {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
     </style>
-</head>
-<body>
-    <h1>Hello, World!</h1>
-</body>
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+      import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-analytics.js";
+      // TODO:Add SDKs for Firebase products that you want to use
+      // https://firebase.google.com/docs/web/setup#available-libraries
+
+      // Your web app's Firebase configuration
+      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+      const firebaseConfig = {
+        apiKey: "AIzaSyDZ6C5wNuq80uaTQTXwsxjSky4KXuJQfEs",
+        authDomain: "braude-92cfa.firebaseapp.com",
+        projectId: "braude-92cfa",
+        storageBucket: "braude-92cfa.appspot.com",
+        messagingSenderId: "462200036585",
+        appId: "1:462200036585:web:e00b8f222dd47193bea478",
+        measurementId: "G-044W89W80J",
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+
+      async function fetchData() {
+        const dataDiv = document.getElementById("data");
+        dataDiv.innerHTML = "Fetching data...";
+
+        try {
+          const querySnapshot = await getDocs(collection(db, "analytic"));
+          let data = {};
+          querySnapshot.forEach((doc) => {
+            data[doc.id] = doc.data();
+          });
+          dataDiv.innerHTML =
+            "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+        } catch (error) {
+          dataDiv.innerHTML = "Error fetching data: " + error;
+        }
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const showScreen = (screenId) => {
+        document
+          .querySelectorAll(".content")
+          .forEach((el) => el.classList.add("hidden"));
+        document.getElementById(screenId).classList.remove("hidden");
+      };
+    </script>
+  </head>
+  <body>
+    <div class="navbar">
+      <p onclick="showScreen('drag')">Drag File</p>
+      <p onclick="showScreen('search')">Search</p>
+      <p onclick="showScreen('analytics')">Analytics</p>
+    </div>
+    <div id="drag" class="content hidden">
+      <h2>Drag File Screen</h2>
+      <div
+        id="drop_zone"
+        style="
+          width: 100%;
+          height: 100px;
+          border: 2px dashed #bbb;
+          text-align: center;
+          line-height: 100px;
+        "
+      >
+        Drag JSON file here
+      </div>
+    </div>
+    <div id="search" class="content hidden">
+      <h2>Search Screen</h2>
+      <input type="text" id="search_term" placeholder="Search..." />
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Term</th>
+            <th>Frequency</th>
+          </tr>
+        </thead>
+        <tbody id="search_results"></tbody>
+      </table>
+    </div>
+    <div id="analytics" class="content hidden">
+      <button onclick="downloadCSV()">Download CSV</button>
+      <h2>Analytics Screen</h2>
+      <div class="charts-row">
+        <div class="chart-container">
+          <canvas id="user_activity_chart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="document_usage_chart"></canvas>
+        </div>
+        <div class="chart-container">
+          <canvas id="tab_activity_chart"></canvas>
+        </div>
+      </div>
+      <h3>User Activity Table</h3>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Number of Actions</th>
+          </tr>
+        </thead>
+        <tbody id="user_activity_table"></tbody>
+      </table>
+      <h3>Document Usage Table</h3>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Document</th>
+            <th>Number of Accesses</th>
+            <th>Percentage</th>
+          </tr>
+        </thead>
+        <tbody id="document_usage_table"></tbody>
+      </table>
+      <h3>Tab Activity Table</h3>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Tab</th>
+            <th>Number of Actions</th>
+            <th>Percentage</th>
+          </tr>
+        </thead>
+        <tbody id="tab_activity_table"></tbody>
+      </table>
+    </div>
+    <script>
+      {
+        drag_n_drop_code;
+      }
+      {
+        search_js_code;
+      }
+      {
+        create_index;
+      }
+    </script>
+  </body>
 </html>
