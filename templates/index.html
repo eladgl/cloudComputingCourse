@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask App</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .dropzone {
+            border: 2px dashed #007bff;
+            border-radius: 5px;
+            padding: 20px;
+            text-align: center;
+            color: #007bff;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">Flask App</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="#upload">Upload a File</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#analytics">Analytics</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#tables">Tables</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <!-- Upload a File Section -->
+        <section id="upload" class="mb-5">
+            <h2>Upload a File</h2>
+            <form action="/upload" method="post" enctype="multipart/form-data"> <!-- call python method -->
+                <div class="dropzone" onclick="document.getElementById('fileInput').click();">
+                    Drag and drop a file here or click to select a file
+                </div>
+                <input type="file" name="file" id="fileInput" style="display: none;" onchange="this.form.submit();">
+            </form>
+        </section>
+
+        <!-- Analytics Section -->
+        <section id="analytics" class="mb-5">
+            <h2>Analytics</h2>
+            <div id="analyticsContent">
+                <!-- Add your analytics content here -->
+            </div>
+        </section>
+
+        <!-- Tables Section -->
+        <section id="tables">
+            <h2>Tables</h2>
+            {% if json_content %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Term</th>
+                        <th>Freq</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for term, freq in json_content.items() %}
+                    <tr>
+                        <td>{{ term }}</td>
+                        <td>{{ freq }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No data to display.</p>
+            {% endif %}
+        </section>
+    </div>
+</body>
+</html>
