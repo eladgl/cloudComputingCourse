@@ -1,0 +1,33 @@
+[
+    {
+        "name": "Eyal Cohen",
+        "email": "eyal.cohen@e.braude.ac.il",
+        "field": "cloud",
+        "link": "link1.com"
+    },
+    {
+        "name": "Idan Aizenberg",
+        "email": "idan.aizenbergn@e.braude.ac.il",
+        "field": "cloud",
+        "link": "link2.com",
+        "favorite_program": "friends"
+    },
+    {
+        "name": "Elad Goldenberg",
+        "email": "elad.goldenberg@e.braude.ac.il",
+        "field": "cloud",
+        "link": "link3.com"
+    },
+    {
+        "name": "Itamar Kraus",
+        "email": "itamar.kraus@e.braude.ac.il",
+        "field": "cloud",
+        "link": "link4.com"
+    },
+    {
+        "name": "Chai Fadida",
+        "email": "chai.fadida@e.braude.ac.il",
+        "field": "cloud",
+        "link": "link5.com"
+    }
+]
