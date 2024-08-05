@@ -1,16 +1,25 @@
 from flask import Flask, render_template, request, jsonify
+from firebase import firebase
 import json
-from firebase_config import db
+# from pyngrok import ngrok
+
 from collections import Counter
 import nltk
 from nltk.chat.util import Chat, reflections
+
+FBconn = firebase.FirebaseApplication('https://braude-92cfa-default-rtdb.europe-west1.firebasedatabase.app/',None) #firebase db url
 
 # Initialize NLTK resources
 nltk.download('punkt')
 nltk.download('wordnet')
 
+#!ngrok authtoken 2kFSSDLyys45fskfBCtXvRitxDT_7Qq1QNzvYYRrmAAnFo5xn
 app = Flask(__name__)
 
+# Set the authtoken and create a public URL
+# ngrok.set_auth_token('2bcUwDOFwTWFQnUax6JMXZjnf8u_2pLSVQj2iZJCinp6TwuUv')  # Replace 'your_authtoken' with your actual authtoken
+# public_url = ngrok.connect(5000, bind_tls=True)  # Specify port as an integer and bind_tls as True
+# print(f" * ngrok tunnel \"{public_url}\" -> \"http://127.0.0.1:5000\"")
 
 def indexing(data):
     frequency_counter = Counter()
@@ -81,13 +90,13 @@ def indexing(data):
                     frequency_counter[value] += 1
     return frequency_counter
 
+
+
+
 def fetch_data_from_firestore():
-    docs = db.collection('analytics').stream()
-    data = {}
-    for doc in docs:
-        doc_data = doc.to_dict().get('data', {})
-        data.update(doc_data)
-    return data
+    data = FBconn.get('/analytics/', None) #firebase db name
+    data_to_return = json.loads(data['data'])
+    return data_to_return
 
 # Fetch data from Firestore when initializing the app
 raw_data = fetch_data_from_firestore()
@@ -119,10 +128,9 @@ patterns = [
     (r'what is your favorite book?', ["I don't read books, but I can help you find information about many books.", "I don't have a favorite book, but I can recommend some if you'd like."]),
     (r'do you play games?', ["I don't play games, but I know a lot about them!", "I can provide information about many games, but I don't play them myself."]),
 ]
-print(raw_data)
+
 if(raw_data ):
     for key in raw_data.keys():
-        print(key)
         pattern = (rf'(?i)(.*{key}.*)', [f'The number of {key} is {raw_data[key]}'])
         patterns.append(pattern)
 
@@ -149,11 +157,18 @@ def upload():
             json_content = json.loads(file_content)
             json_as_index = indexing(json_content)
             
+            # Convert Counter object to dictionary
+            counter_dict = {}
+            for key, value in json_as_index.items():
+                counter_dict[key] = value
+            # Convert dictionary to JSON string
+            json_obj = json.dumps(counter_dict, indent=4)
+            print(counter_dict)
             # Store JSON content in Firestore
-            db.collection('analytics').add({'data': json_as_index})
-            
+            result = FBconn.put('/analytics/', 'data' ,json_obj) #firebase db name
+
             # Process the JSON content here
-            return render_template('index.html', json_content=json_as_index)
+            return render_template('index.html', json_content=fetch_data_from_firestore())
         except json.JSONDecodeError:
             return jsonify({'error': 'Invalid JSON file'}), 400
     else:
@@ -163,6 +178,7 @@ def upload():
 def get_data():
     try:
         data = fetch_data_from_firestore()
+        print(data)
         return jsonify(data), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -174,3 +190,5 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
