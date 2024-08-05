@@ -9,47 +9,7 @@
       href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
     />
     <link rel="stylesheet" href="./style.css" />
-
-    <script type="module">
-      // Import the functions you need from the SDKs you need
-      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-      import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-analytics.js";
-      // TODO: Add SDKs for Firebase products that you want to use
-      // https://firebase.google.com/docs/web/setup#available-libraries
-
-      // Your web app's Firebase configuration
-      // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-      const firebaseConfig = {
-        apiKey: "AIzaSyDZ6C5wNuq80uaTQTXwsxjSky4KXuJQfEs",
-        authDomain: "braude-92cfa.firebaseapp.com",
-        projectId: "braude-92cfa",
-        storageBucket: "braude-92cfa.appspot.com",
-        messagingSenderId: "462200036585",
-        appId: "1:462200036585:web:e00b8f222dd47193bea478",
-        measurementId: "G-044W89W80J",
-      };
-
-      // Initialize Firebase
-      const app = initializeApp(firebaseConfig);
-      const analytics = getAnalytics(app);
-
-      async function fetchData() {
-        const dataDiv = document.getElementById("data");
-        dataDiv.innerHTML = "Fetching data...";
-
-        try {
-          const querySnapshot = await getDocs(collection(db, "analytic"));
-          let data = {};
-          querySnapshot.forEach((doc) => {
-            data[doc.id] = doc.data();
-          });
-          dataDiv.innerHTML =
-            "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
-        } catch (error) {
-          dataDiv.innerHTML = "Error fetching data: " + error;
-        }
-      }
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
@@ -109,7 +69,53 @@
       <section id="analytics" class="mb-5">
         <h2>Analytics</h2>
         <div id="analyticsContent">
-          <!-- Add your analytics content here -->
+          <div id="analytics" class="content hidden">
+            <button id="download_csv_button">Download CSV</button>
+            <h2>Analytics Screen</h2>
+            <div class="charts-row">
+              <div class="chart-container">
+                <canvas id="user_activity_chart"></canvas>
+              </div>
+              <div class="chart-container">
+                <canvas id="document_usage_chart"></canvas>
+              </div>
+              <div class="chart-container">
+                <canvas id="tab_activity_chart"></canvas>
+              </div>
+            </div>
+            <h3>User Activity Table</h3>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Number of Actions</th>
+                </tr>
+              </thead>
+              <tbody id="user_activity_table"></tbody>
+            </table>
+            <h3>Document Usage Table</h3>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Document</th>
+                  <th>Number of Accesses</th>
+                  <th>Percentage</th>
+                </tr>
+              </thead>
+              <tbody id="document_usage_table"></tbody>
+            </table>
+            <h3>Tab Activity Table</h3>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Tab</th>
+                  <th>Number of Actions</th>
+                  <th>Percentage</th>
+                </tr>
+              </thead>
+              <tbody id="tab_activity_table"></tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -138,5 +144,234 @@
         {% endif %}
       </section>
     </div>
+
+    <script type="module">
+      // Parse and store JSON data
+      const jsonData = {{ json_content|tojson|safe }};
+      localStorage.setItem("jsonData", JSON.stringify(jsonData));
+
+      function displayJsonData(jsonData) {
+        showScreen("search");
+        localStorage.setItem("displayedJsonData", JSON.stringify(jsonData));
+        filterJsonData("");
+      }
+
+      function downloadCSV() {
+        let userActivity = JSON.parse(localStorage.getItem("userActivity"));
+        let documentUsage = JSON.parse(localStorage.getItem("documentUsage"));
+        let tabActivity = JSON.parse(localStorage.getItem("tabActivity"));
+
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "ONSHAPE DATA\n";
+        // Add User Activity Data
+        csvContent += "User Activity\n";
+        csvContent += "User,Number of Actions\n";
+        for (let user in userActivity) {
+          csvContent += `${user},${userActivity[user]}\n`;
+        }
+        csvContent += "\n";
+
+        // Add Document Usage Data
+        csvContent += "Document Usage\n";
+        csvContent += "Document,Number of Accesses,Percentage\n";
+        let documentPercentages = calculatePercentages(documentUsage);
+        for (let document in documentUsage) {
+          csvContent += `${document},${documentUsage[document]},${documentPercentages[document]}\n`;
+        }
+        csvContent += "\n";
+
+        // Add Tab Activity Data
+        csvContent += "Tab Activity\n";
+        csvContent += "Tab,Number of Actions,Percentage\n";
+        let tabPercentages = calculatePercentages(tabActivity);
+        for (let tab in tabActivity) {
+          csvContent += `${tab},${tabActivity[tab]},${tabPercentages[tab]}\n`;
+        }
+
+        // Trigger download
+        var encodedUri = encodeURI(csvContent);
+        var link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "analytics_data.csv");
+        document.body.appendChild(link);
+        link.click();
+      }
+
+      const downloadCsvButton = document.getElementById("download_csv_button");
+      downloadCsvButton.addEventListener("click", downloadCSV);
+
+      function calculatePercentages(data) {
+        var total = Object.values(data).reduce((acc, value) => acc + value, 0);
+        var percentages = {};
+
+        for (var key in data) {
+          percentages[key] = ((data[key] / total) * 100).toFixed(2) + "%";
+        }
+
+        return percentages;
+      }
+
+      function filterJsonData(searchTerm) {
+        var table = document.getElementById("search_results");
+        table.innerHTML = ""; // Clear the table
+        var jsonData = JSON.parse(
+          JSON.parse(localStorage.getItem("displayedJsonData"))
+        );
+        Object.keys(jsonData).forEach(function (item) {
+          var matches = item.toLowerCase().includes(searchTerm.toLowerCase());
+          if (matches) {
+            var row = document.createElement("tr");
+            var termCell = document.createElement("td");
+            var freqCell = document.createElement("td");
+            termCell.textContent = item;
+            freqCell.textContent = jsonData[item];
+            row.appendChild(termCell);
+            row.appendChild(freqCell);
+            table.appendChild(row);
+          }
+        });
+      }
+
+      function calculateAnalytics(jsonData) {
+        var userActivity = {};
+        var documentUsage = {};
+        var tabActivity = {};
+        const data = JSON.parse(jsonData);
+        Object.entries(data).forEach(([key, value]) => {
+            if (key.includes("User")) {
+            var user = key.split(" ")[1];
+            if (userActivity[user]) {
+                userActivity[user] += value;
+            } else {
+                userActivity[user] = value;
+            }
+        } else if (key.includes("Document") || key.includes("doc") || key.includes("file")) {
+            if (documentUsage[key]) {
+                documentUsage[key] += value;
+            } else {
+                documentUsage[key] = value;
+            }
+        } else if (key.includes("Tab")) {
+            if (tabActivity[key]) {
+                tabActivity[key] += value;
+            } else {
+                tabActivity[key] = value;
+            }
+        }
+        });
+        // Save data to local storage for later use
+        localStorage.setItem("userActivity", JSON.stringify(userActivity));
+        localStorage.setItem("documentUsage", JSON.stringify(documentUsage));
+        localStorage.setItem("tabActivity", JSON.stringify(tabActivity));
+
+        updateTable("user_activity_table", userActivity);
+        updateTable("document_usage_table", documentUsage);
+        updateTable("tab_activity_table", tabActivity);
+        updateCharts(userActivity, documentUsage, tabActivity); // Update charts with the data
+      }
+
+      function updateTable(tableId, data) {
+        var table = document.getElementById(tableId);
+        table.innerHTML = ""; // Clear the table
+        var percentages = calculatePercentages(data);
+
+        for (var key in data) {
+          var row = document.createElement("tr");
+          var cellKey = document.createElement("td");
+          cellKey.textContent = key;
+          var cellValue = document.createElement("td");
+          cellValue.textContent = data[key];
+          var cellPercent = document.createElement("td");
+          cellPercent.textContent = percentages[key];
+          row.appendChild(cellKey);
+          row.appendChild(cellValue);
+          row.appendChild(cellPercent);
+          table.appendChild(row);
+        }
+      }
+
+      function updateCharts(userActivity, documentUsage, tabActivity) {
+        var userActivityChart = new Chart(
+          document.getElementById("user_activity_chart"),
+          {
+            type: "doughnut",
+            data: {
+              labels: Object.keys(userActivity),
+              datasets: [
+                {
+                  label: "User Activity",
+                  data: Object.values(userActivity),
+                  backgroundColor: [
+                    "#FF6384",
+                    "#36A2EB",
+                    "#FFCE56",
+                    "#4BC0C0",
+                    "#9966FF",
+                    "#FF9F40",
+                  ],
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+            },
+          }
+        );
+
+        var documentUsageChart = new Chart(
+          document.getElementById("document_usage_chart"),
+          {
+            type: "bar",
+            data: {
+              labels: Object.keys(documentUsage),
+              datasets: [
+                {
+                  label: "Document Usage",
+                  data: Object.values(documentUsage),
+                  backgroundColor: "#36A2EB",
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+            },
+          }
+        );
+
+        var tabActivityChart = new Chart(
+          document.getElementById("tab_activity_chart"),
+          {
+            type: "pie",
+            data: {
+              labels: Object.keys(tabActivity),
+              datasets: [
+                {
+                  label: "Tab Activity",
+                  data: Object.values(tabActivity),
+                  backgroundColor: [
+                    "#FF6384",
+                    "#36A2EB",
+                    "#FFCE56",
+                    "#4BC0C0",
+                    "#9966FF",
+                    "#FF9F40",
+                  ],
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+            },
+          }
+        );
+      }
+
+
+      // Call your data processing function
+      calculateAnalytics(localStorage.getItem("jsonData"));
+    </script>
   </body>
 </html>
