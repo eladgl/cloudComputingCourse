@@ -22,6 +22,16 @@ app = Flask(__name__)
 # print(f" * ngrok tunnel \"{public_url}\" -> \"http://127.0.0.1:5000\"")
 
 def indexing(data):
+    """
+    Processes a list of JSON objects to count the occurrences of specific keywords
+    and their related categories.
+
+    Args:
+        data (list): List of JSON objects to be processed.
+
+    Returns:
+        Counter: A Counter object containing the frequency of keywords.
+    """
     frequency_counter = Counter()
     # Step 3: Iterate through each object in the array
     for obj in data:
@@ -94,6 +104,12 @@ def indexing(data):
 
 
 def fetch_data_from_firestore():
+    """
+    Fetches data from the Firebase Firestore database.
+
+    Returns:
+        dict: Data fetched from Firestore in JSON format.
+    """
     data = FBconn.get('/analytics/', None) #firebase db name
     data_to_return = json.loads(data['data'])
     return data_to_return
@@ -101,6 +117,7 @@ def fetch_data_from_firestore():
 # Fetch data from Firestore when initializing the app
 raw_data = fetch_data_from_firestore()
 
+# Define chatbot patterns
 patterns = [
     (r'hi|hello|hey', ['Hello!', 'Hi there!', 'Hey!']),
     (r'how are you?', ["I'm good, thank you!", "I'm doing well, thanks for asking."]),
@@ -129,25 +146,49 @@ patterns = [
     (r'do you play games?', ["I don't play games, but I know a lot about them!", "I can provide information about many games, but I don't play them myself."]),
 ]
 
+# Add patterns based on fetched data
 if(raw_data ):
     for key in raw_data.keys():
         pattern = (rf'(?i)(.*{key}.*)', [f'The number of {key} is {raw_data[key]}'])
         patterns.append(pattern)
 
+# Initialize chatbot with defined patterns
 chatbot_instance = Chat(patterns, reflections)
 
 @app.route('/chat', methods=['POST'])
 def chat():
+    """
+    Endpoint to handle chat requests.
+
+    Expects JSON data with a 'message' key.
+
+    Returns:
+        JSON: A JSON object containing the chatbot's response.
+    """
     user_message = request.json.get('message')
     response = chatbot_instance.respond(user_message)
     return jsonify({'response': response})
 
 @app.route('/chatbot')
 def chatbot():
+    """
+    Renders the chatbot interface page.
+
+    Returns:
+        HTML: The rendered chatbot interface template.
+    """
     return render_template('chatbot.html')
 
 @app.route('/upload', methods=['POST'])
 def upload():
+    """
+    Handles file upload and processes JSON files.
+
+    Expects a file upload with the 'file' key.
+
+    Returns:
+        HTML or JSON: Renders index.html with updated data or returns an error message.
+    """
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
@@ -176,6 +217,12 @@ def upload():
 
 @app.route('/getData', methods=['GET'])
 def get_data():
+    """
+    Endpoint to fetch data from Firestore.
+
+    Returns:
+        JSON: Data fetched from Firestore or an error message.
+    """
     try:
         data = fetch_data_from_firestore()
         print(data)
@@ -185,6 +232,12 @@ def get_data():
 
 @app.route('/')
 def index():
+    """
+    Renders the index page with data from Firestore.
+
+    Returns:
+        HTML: The rendered index template with data.
+    """
     data = fetch_data_from_firestore()
     return render_template('index.html', json_content=data)
 
