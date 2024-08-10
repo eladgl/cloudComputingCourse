@@ -414,7 +414,7 @@
         var tabActivity = {};
         const data = JSON.parse(jsonData);
 
-        Object.entries(data).forEach(([key, value]) => {
+        Object.entries(data)?.forEach(([key, value]) => {
             if (key.includes("User") || key.includes("Student")) {
             var user = key.match(/Student\s*([A-Za-z0-9]+)/i)?.[0];
             if (userActivity[user]) {
