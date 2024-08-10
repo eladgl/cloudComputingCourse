@@ -3,7 +3,7 @@ from firebase import firebase
 import json
 from pyngrok import ngrok
 
-from collections import Counter
+from collections import Counter, defaultdict
 import nltk
 from nltk.chat.util import Chat, reflections
 
@@ -32,73 +32,75 @@ def indexing(data):
     Returns:
         Counter: A Counter object containing the frequency of keywords.
     """
-    frequency_counter = Counter()
-    # Step 3: Iterate through each object in the array
+    unique_students = set()
     for obj in data:
-        # Step 4: Extract keys and values from each object
-        for key, value in obj.items():
-            # Step 5: Count frequencies of each key-value pair
-            if key == "Time":
-                # Count occurrences of the key "Time" itself
-                frequency_counter[key] += 1
-            elif key == "Description":
-                # Check for special conditions in "Description" values
-                if "Chamfer" in value:
-                    frequency_counter["Chamfer"] += 1
-                elif "Extrude" in value:
-                    # Count occurrences of "Extrude" within the values of "Description"
-                    frequency_counter["Extrude"] += 1
-                elif "Revolute" in value:
-                    frequency_counter["Revolute"] += 1
-                elif "Move" in value:
-                    frequency_counter["Move"] += 1
-                elif "Suppress" in value:
-                    frequency_counter["Suppress"] += 1
-                elif "Unsuppress" in value:
-                    frequency_counter["Unuppress"] += 1
-                elif "Unfix" in value:
-                    frequency_counter["Unfix"] += 1
-                elif "Hide" in value:
-                    frequency_counter["Suppress"] += 1
-                elif "Insert feature" in value:
-                    frequency_counter["Insert feature"] += 1
-                elif "Insert tab" in value:
-                    frequency_counter["Insert tab"] += 1
-                elif "Edit" in value:
-                    frequency_counter["Edit"] += 1
-                elif "Delete" in value:
-                    frequency_counter["Delete"] += 1
-                elif "Copy" in value:
-                    frequency_counter["Copy"] += 1
-                elif "Tab Bridge" in value:
-                    frequency_counter["Tab Bridge"] += 1
-                elif "User StudentA1 imported" in value:
-                    frequency_counter["User StudentA1 imported"] += 1
-                elif "User StudentA1 exported" in value:
-                    frequency_counter["User StudentA1 exported"] += 1
-                elif "Change" in value:
-                    frequency_counter["Change"] += 1
-                elif "Tab" in value and "Assembly" in value:
-                    frequency_counter["Tab: Assembly"] += 1
-                elif "Tab" in value and "Part Studio" in value:
-                    frequency_counter["Tab: Part Studio"] += 1
-                elif "Insert new tab" in value and 'Assembly' in value:
-                    frequency_counter["Insert new tab: Assembly"] += 1
-                elif "Insert new tab" in value and 'Part Studio' in value:
-                    frequency_counter["Insert new tab: Part Studio"] += 1
-                elif "Show" in value and 'Planar' in value:
-                    frequency_counter["Show: Planar"] += 1
-                elif "Rename tab" in value:
-                    frequency_counter["Rename tab"] += 1
-                elif "Insert" in value and "Part" in value:
-                    frequency_counter["Insert: Part"] += 1
-                elif "Fix" in value and "Part" in value:
-                    frequency_counter["Fix: Part"] += 1
-                elif "Show Sketch" in value:
-                    frequency_counter["Show Sketch"] += 1
-                else:
-                    frequency_counter[value] += 1
-    return frequency_counter
+        unique_students.add(obj["User"])
+    print(f"Number of different students: {len(unique_students)}")
+    print(f"Students: {list(unique_students)}")
+
+    user_actions = defaultdict(Counter)
+    # Step 3: Iterate through each object in the array
+    # Iterate through each object in the data
+    for obj in data:
+        user = obj["User"]
+        description = obj.get("Description", "")
+        
+        # Update the user's action counter based on the description
+        if "Chamfer" in description:
+            user_actions[user]["Chamfer"] += 1
+        elif "Extrude" in description:
+            user_actions[user]["Extrude"] += 1
+        elif "Revolute" in description:
+            user_actions[user]["Revolute"] += 1
+        elif "Move" in description:
+            user_actions[user]["Move"] += 1
+        elif "Suppress" in description:
+            user_actions[user]["Suppress"] += 1
+        elif "Unsuppress" in description:
+            user_actions[user]["Unsuppress"] += 1
+        elif "Unfix" in description:
+            user_actions[user]["Unfix"] += 1
+        elif "Hide" in description:
+            user_actions[user]["Suppress"] += 1
+        elif "Insert feature" in description:
+            user_actions[user]["Insert feature"] += 1
+        elif "Insert tab" in description:
+            user_actions[user]["Insert tab"] += 1
+        elif "Edit" in description:
+            user_actions[user]["Edit"] += 1
+        elif "Delete" in description:
+            user_actions[user]["Delete"] += 1
+        elif "Copy" in description:
+            user_actions[user]["Copy"] += 1
+        elif "Tab Bridge" in description:
+            user_actions[user]["Tab Bridge"] += 1
+        elif "User StudentA1 imported" in description:
+            user_actions[user]["User StudentA1 imported"] += 1
+        elif "User StudentA1 exported" in description:
+            user_actions[user]["User StudentA1 exported"] += 1
+        elif "Change" in description:
+            user_actions[user]["Change"] += 1
+        elif "Tab" in description and "Assembly" in description:
+            user_actions[user]["Tab: Assembly"] += 1
+        elif "Tab" in description and "Part Studio" in description:
+            user_actions[user]["Tab: Part Studio"] += 1
+        elif "Insert new tab" in description and 'Assembly' in description:
+            user_actions[user]["Insert new tab: Assembly"] += 1
+        elif "Insert new tab" in description and 'Part Studio' in description:
+            user_actions[user]["Insert new tab: Part Studio"] += 1
+        elif "Show" in description and 'Planar' in description:
+            user_actions[user]["Show: Planar"] += 1
+        elif "Rename tab" in description:
+            user_actions[user]["Rename tab"] += 1
+        elif "Insert" in description and "Part" in description:
+            user_actions[user]["Insert: Part"] += 1
+        elif "Fix" in description and "Part" in description:
+            user_actions[user]["Fix: Part"] += 1
+        elif "Show Sketch" in description:
+            user_actions[user]["Show Sketch"] += 1
+        else:
+            user_actions[user][description] += 1
+    return user_actions
 
 
 
@@ -116,7 +118,6 @@ def fetch_data_from_firestore():
 
 # Fetch data from Firestore when initializing the app
 raw_data = fetch_data_from_firestore()
-
 # Define chatbot patterns
 patterns = [
     (r'hi|hello|hey', ['Hello!', 'Hi there!', 'Hey!']),
@@ -148,9 +149,12 @@ patterns = [
 
 # Add patterns based on fetched data
 if(raw_data ):
-    for key in raw_data.keys():
-        pattern = (rf'(?i)(.*{key}.*)', [f'The number of {key} is {raw_data[key]}'])
-        patterns.append(pattern)
+    for student in raw_data.keys():
+        for key in raw_data[student].keys():
+            pattern = (rf'(?i)(.*{student}.*{key}.*)', [f'The number of {key} done by {student} is {raw_data[student][key]}'])
+            patterns.append(pattern)
+            pattern2 = (rf'(?i)(.*{key}.*{student}.*)', [f'The number of {key} done by {student} is {raw_data[student][key]}'])
+            patterns.append(pattern2)
 
 # Initialize chatbot with defined patterns
 chatbot_instance = Chat(patterns, reflections)

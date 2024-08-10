@@ -8,11 +8,124 @@
       rel="stylesheet"
       href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
     />
-    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="../static/style.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const addDeleteTag = (deleteCount, wrapper) => {
+        if(deleteCount < 10){
+            const delTagDiv = document.createElement('div');
+            delTagDiv.className = 'tag';
+            const deleteLabel = document.createElement('label');
+            deleteLabel.className = 'proficient_student';
+            deleteLabel.textContent = `Software Profficient Student`;
+            deleteLabel.title = `Software Profficient Student`;
+            delTagDiv.appendChild(deleteLabel);
+            wrapper.appendChild(delTagDiv);
+        }
+      }
+
+      const addLevelTag = (userPercentage, wrapper) => {
+        // Create a new div element for the tag
+          const tagDiv = document.createElement('div');
+          tagDiv.className = 'tag';
+          // Create the label element
+          const label = document.createElement('label');
+          // Determine if the user is dominant or weak
+          if (userPercentage > 40) {
+            label.className = 'dominant_student';
+            label.textContent = 'Dominant Student';
+          } else if (userPercentage < 20) {
+            label.className = 'weak_student';
+            label.textContent = 'Weak Student';
+          }
+          label.title = label.textContent;
+          // Append the main label to the tag div if there's a label to show
+          if (label.textContent) {
+            tagDiv.appendChild(label);
+
+            // Append the tag div to the wrapper
+            wrapper.appendChild(tagDiv);
+          }
+      }
+      
+      function renderUserTags(userName) {
+        const tagsWrapper = document.getElementById(`tagsWrapper-${userName}`);
+        tagsWrapper.innerHTML = '';
+
+        // Retrieve userActivity from localStorage
+        const userActivity = JSON.parse(localStorage.getItem('userActivity'));
+        const userDetails = JSON.parse(localStorage.getItem('studentData'));
+
+        if (userActivity && userActivity[userName] && userDetails && userDetails[userName]) {
+          // Calculate total operations
+          const totalOperations = Object.values(userActivity).reduce((sum, val) => sum + val, 0);
+          // Get the user's operations count
+          const userOperations = userActivity[userName];
+          const userPercentage = (userOperations / totalOperations) * 100;
+          // Calculate delete count for the user
+          const deleteCount = userDetails[userName]['Delete'] || 0;
+
+          addDeleteTag(deleteCount, tagsWrapper);
+          addLevelTag(userPercentage, tagsWrapper);
+
+          
+        }
+      }
+
+      function showUserTable(userId) {
+        // Hide all tables
+        var tables = document.querySelectorAll(".user-table");
+        tables.forEach(function (table) {
+          table.style.display = "none";
+        });
+
+        // Show the selected user's table
+        var selectedTable = document.getElementById("table-" + userId);
+        if (selectedTable) {
+          selectedTable.style.display = "block";
+        }
+        renderUserTags(userId)
+      }
+
+      function filterButtons() {
+        // Get the search input value
+        var input = document.getElementById("searchInput");
+        var filter = input.value.toLowerCase();
+        var buttons = document.querySelectorAll(".user-button");
+
+        // Loop through all buttons and hide those that don't match the search query
+        buttons.forEach(function (button) {
+          var text = button.textContent.toLowerCase();
+          if (text.indexOf(filter) > -1) {
+            button.style.display = "";
+          } else {
+            button.style.display = "none";
+          }
+        });
+      }
+
+      function filterTable() {
+        // Get the search input value
+        var input = document.getElementById("searchTermInput");
+        var filter = input.value.toLowerCase();
+        var rows = document.querySelectorAll("#termsTable tbody tr");
+
+        // Loop through all table rows and hide those that don't match the search query
+        rows.forEach(function (row) {
+          var term = row.querySelector("td").textContent.toLowerCase();
+          if (term.indexOf(filter) > -1) {
+            row.style.display = "";
+          } else {
+            row.style.display = "none";
+          }
+        });
+      }
+
+
+    </script>
   </head>
   <body>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <nav class="navbar navbar-expand-lg">
       <a class="navbar-brand" href="#">ZEBRA</a>
       <button
         class="navbar-toggler"
@@ -42,7 +155,7 @@
         </ul>
       </div>
     </nav>
-
+    <div class="wrapper">
     <div class="container mt-5">
       <!-- Upload a File Section -->
       <section id="upload" class="mb-5">
@@ -52,6 +165,8 @@
           <div
             class="dropzone"
             onclick="document.getElementById('fileInput').click();"
+            ondragover="event.preventDefault();"
+            ondrop="handleFileDrop(event);"
           >
             Drag and drop a file here or click to select a file
           </div>
@@ -59,8 +174,8 @@
             type="file"
             name="file"
             id="fileInput"
-            style="display: none"
-            onchange="this.form.submit();"
+            style="display: none; cursor: pointer"
+            onchange="handleFileChange(event);"
           />
         </form>
       </section>
@@ -69,8 +184,10 @@
       <section id="analytics" class="mb-5">
         <h2>Analytics</h2>
         <div id="analyticsContent">
-          <div id="analytics" class="content hidden">
-            <button id="download_csv_button">Download CSV</button>
+          <div id="analytics" class="content">
+            <button class="button" id="download_csv_button">
+              Download CSV
+            </button>
             <h2>Analytics Screen</h2>
             <div class="charts-row">
               <div class="chart-container">
@@ -89,6 +206,7 @@
                 <tr>
                   <th>User</th>
                   <th>Number of Actions</th>
+                  <th>Percentage</th>
                 </tr>
               </thead>
               <tbody id="user_activity_table"></tbody>
@@ -115,6 +233,51 @@
               </thead>
               <tbody id="tab_activity_table"></tbody>
             </table>
+
+            <div>
+              <input
+                type="text"
+                id="searchInput"
+                class="searchInput"
+                placeholder="Search users to filter..."
+                oninput="filterButtons()"
+              />
+            </div>
+
+            <div class="user-ribbon">
+              {% for user in json_content.keys() %}
+              
+              <button class="user-button" onclick="showUserTable('{{ user }}')">
+                {{ user }}
+              </button>
+              {% endfor %}
+            </div>
+
+            {% for user, terms in json_content.items() %}
+            <div id="table-{{ user }}" class="user-table" style="display: none">
+              
+              <h3>{{ user }}'s Activity</h3>
+
+              <div id="tagsWrapper-{{user}}" class="tagsWrapper"></div>
+
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Term</th>
+                    <th>Frequency</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for term, freq in terms.items() %}
+                  <tr>
+                    <td>{{ term }}</td>
+                    <td>{{ freq }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% endfor %}
           </div>
         </div>
       </section>
@@ -123,7 +286,14 @@
       <section id="tables">
         <h2>Tables</h2>
         {% if json_content %}
-        <table class="table table-striped">
+        <input
+          type="text"
+          id="searchTermInput"
+          class="searchInput"
+          placeholder="Search terms to filter..."
+          oninput="filterTable()"
+        />
+        <table class="table table-striped" id="termsTable">
           <thead>
             <tr>
               <th>Term</th>
@@ -131,7 +301,11 @@
             </tr>
           </thead>
           <tbody>
-            {% for term, freq in json_content.items() %}
+            {% set summary = {} %} {% for user, terms in json_content.items() %}
+            {% for term, freq in terms.items() %} {% if term in summary %} {%
+            set summary = summary.update({term: summary[term] + freq}) %} {%
+            else %} {% set summary = summary.update({term: freq}) %} {% endif %}
+            {% endfor %} {% endfor %} {% for term, freq in summary.items() %}
             <tr>
               <td>{{ term }}</td>
               <td>{{ freq }}</td>
@@ -144,11 +318,13 @@
         {% endif %}
       </section>
     </div>
+    
 
     <script type="module">
       // Parse and store JSON data
       const jsonData = {{ json_content|tojson|safe }};
-      localStorage.setItem("jsonData", JSON.stringify(jsonData));
+
+      localStorage.setItem("studentData", JSON.stringify(jsonData));
 
       function displayJsonData(jsonData) {
         showScreen("search");
@@ -237,9 +413,10 @@
         var documentUsage = {};
         var tabActivity = {};
         const data = JSON.parse(jsonData);
+
         Object.entries(data).forEach(([key, value]) => {
-            if (key.includes("User")) {
-            var user = key.split(" ")[1];
+            if (key.includes("User") || key.includes("Student")) {
+            var user = key.match(/Student\s*([A-Za-z0-9]+)/i)?.[0];
             if (userActivity[user]) {
                 userActivity[user] += value;
             } else {
@@ -368,6 +545,8 @@
           }
         );
       }
+
+     
 
 
       // Call your data processing function
