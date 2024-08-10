@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, jsonify
 from firebase import firebase
 import json
-# from pyngrok import ngrok
+from pyngrok import ngrok
 
 from collections import Counter
 import nltk

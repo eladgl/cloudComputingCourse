@@ -1,3 +1,4 @@
 firebase
 flask
 nltk
+pyngrok
