@@ -166,7 +166,7 @@
             class="dropzone"
             onclick="document.getElementById('fileInput').click();"
             ondragover="event.preventDefault();"
-            ondrop="handleFileDrop(event);"
+            ondrop="this.form.submit();"
           >
             Drag and drop a file here or click to select a file
           </div>
@@ -175,7 +175,7 @@
             name="file"
             id="fileInput"
             style="display: none; cursor: pointer"
-            onchange="document.getElementById('fileInput').click();"
+            onchange="this.form.submit();"
           />
         </form>
       </section>

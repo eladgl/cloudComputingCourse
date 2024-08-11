@@ -14,7 +14,7 @@ nltk.download('punkt')
 nltk.download('wordnet')
 
 #!ngrok authtoken 2kFSSDLyys45fskfBCtXvRitxDT_7Qq1QNzvYYRrmAAnFo5xn
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 
 # Set the authtoken and create a public URL
 # ngrok.set_auth_token('2bcUwDOFwTWFQnUax6JMXZjnf8u_2pLSVQj2iZJCinp6TwuUv')  # Replace 'your_authtoken' with your actual authtoken
