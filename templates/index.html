@@ -8,7 +8,7 @@
       rel="stylesheet"
       href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
     />
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
       const addDeleteTag = (deleteCount, wrapper) => {
@@ -175,7 +175,7 @@
             name="file"
             id="fileInput"
             style="display: none; cursor: pointer"
-            onchange="handleFileChange(event);"
+            onchange="document.getElementById('fileInput').click();"
           />
         </form>
       </section>
@@ -323,6 +323,17 @@
     <script type="module">
       // Parse and store JSON data
       const jsonData = {{ json_content|tojson|safe }};
+      const overallData = {};
+      for (let user in jsonData) {
+        for(let term in jsonData[user]){
+          if(term in overallData){
+            overallData[term] = overallData[term] + jsonData[user][term];
+          } else {
+            overallData[term] = jsonData[user][term];
+          }
+        }
+      }
+      localStorage.setItem('jsonData', JSON.stringify(overallData));
 
       localStorage.setItem("studentData", JSON.stringify(jsonData));
 
@@ -408,34 +419,39 @@
         });
       }
 
+      
+
       function calculateAnalytics(jsonData) {
-        debugger;
         var userActivity = {};
         var documentUsage = {};
         var tabActivity = {};
         const data = JSON.parse(jsonData);
 
-        Object.entries(data)?.forEach(([key, value]) => {
-            if (key.includes("User") || key.includes("Student")) {
-            var user = key.match(/Student\s*([A-Za-z0-9]+)/i)?.[0];
-            if (userActivity[user]) {
-                userActivity[user] += value;
-            } else {
-                userActivity[user] = value;
-            }
-        } else if (key.includes("Document") || key.includes("doc") || key.includes("file")) {
-            if (documentUsage[key]) {
-                documentUsage[key] += value;
-            } else {
-                documentUsage[key] = value;
-            }
-        } else if (key.includes("Tab")) {
-            if (tabActivity[key]) {
-                tabActivity[key] += value;
-            } else {
-                tabActivity[key] = value;
-            }
-        }
+        Object.entries(data).forEach(([key, value]) => {
+          if (!userActivity[key]) {
+              userActivity[key] = 0;
+          }
+
+          // Assuming `value` is an object where `term` is the key and `freq` is the value
+          for (const [term, freq] of Object.entries(value)) {
+              userActivity[key] += freq;
+
+              if (term.includes("Document") || term.includes("doc") || term.includes("file")) {
+                  if (documentUsage[term]) {
+                      documentUsage[term] += freq;
+                  } else {
+                      documentUsage[term] = freq;
+                  }
+              }
+
+              if (term.includes("Tab")) {
+                  if (tabActivity[term]) {
+                      tabActivity[term] += freq;
+                  } else {
+                      tabActivity[term] = freq;
+                  }
+              }
+          }
         });
         // Save data to local storage for later use
         localStorage.setItem("userActivity", JSON.stringify(userActivity));
