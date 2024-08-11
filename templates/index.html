@@ -33,10 +33,10 @@
           // Determine if the user is dominant or weak
           if (userPercentage > 40) {
             label.className = 'dominant_student';
-            label.textContent = 'Dominant Student';
+            label.textContent = 'Dominant Contributor';
           } else if (userPercentage < 20) {
             label.className = 'weak_student';
-            label.textContent = 'Weak Student';
+            label.textContent = 'Weak Contributor';
           }
           label.title = label.textContent;
           // Append the main label to the tag div if there's a label to show
@@ -166,7 +166,7 @@
             class="dropzone"
             onclick="document.getElementById('fileInput').click();"
             ondragover="event.preventDefault();"
-            ondrop="this.form.submit();"
+            
           >
             Drag and drop a file here or click to select a file
           </div>
@@ -176,6 +176,7 @@
             id="fileInput"
             style="display: none; cursor: pointer"
             onchange="this.form.submit();"
+            ondrop="this.form.submit();"
           />
         </form>
       </section>
